@@ -1,0 +1,17 @@
+[Unit]
+Description=Automated Lecture Audio Transcription and Summarization Pipeline
+After=network.target
+
+[Service]
+Type=oneshot
+User=<username>
+WorkingDirectory=/home/<username>
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/<username>/whisper-env/bin/python3 /home/<username>/pipeline.py
+TimeoutStartSec=infinity
+Nice=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

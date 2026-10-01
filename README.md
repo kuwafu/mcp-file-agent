@@ -18,11 +18,11 @@ Proxmox上のNextcloudを中心とした、ローカルLLM（llama.cpp）およ�
 ```text
 [ スマホ (手動アップロード) ] ──(Nextcloud App)──┐
                                               ▼
-            [ Proxmox VE (voyager) ]
-            ├── [Nextcloud (VM)]  <-- ストレージ基盤 (WebDAV API)
+            [ Proxmox VE ]
+            ├── [Nextcloud (VM/LXC)] <-- ストレージ基盤 (WebDAV API)
             │        ▲
             │        │ (WebDAV API)
-            ├── [LibreChat (LXC)] <-- UI & MCPクライアント基盤
+            ├── [LibreChat (LXC)]    <-- UI & MCPクライアント基盤
             │    └── [mcpServers (Nextcloud Agent)]
             │             │ (OpenAI互換 API / Tool Calling)
             │             ▼
@@ -30,4 +30,34 @@ Proxmox上のNextcloudを中心とした、ローカルLLM（llama.cpp）およ�
                  ├── llama.cpp (Qwen2.5 / DeepSeek-V2)
                  ├── faster-whisper (AVX-512 VNNI / INT8)
                  └── systemd timer (講義音声自律巡回デーモン)
+```
+
+---
+
+## ドキュメント & 詳細仕様
+
+* **[講義音声 自動文字起こし & 構造化要約パイプライン仕様](docs/lecture-pipeline.md)**
+  * ステートマシン設計、生AAC破損のffmpegサニタイズ、PyAV前方互換性対策、AVX-512 VNNI × beam_size=1 チューニング、systemd timer排他制御。
+* **[Nextcloud MCP 連携仕様](docs/nextcloud-mcp.md)**
+  * FastMCP、WebDAVクライアント仕様、LibreChat SSRF回避設定、ファイル自動仕分け。
+* **[インフラ・ネットワーク構成仕様](docs/infrastructure.md)**
+  * Proxmox VE、Tailscale MagicDNS固定、Xeon CPU/NUMA最適化。
+
+---
+
+## ディレクトリ構成
+
+```text
+.
+├── README.md
+├── docs/
+│   ├── infrastructure.md     # Proxmox / ネットワーク構成
+│   ├── nextcloud-mcp.md      # FastMCP / WebDAV 連携仕様
+│   └── lecture-pipeline.md   # 音声文字起こし・要約パイプライン仕様 & 知見
+├── src/                      # スクリプト本体
+│   ├── pipeline.py
+│   └── nc_client.py
+└── systemd/                  # ユニット定義
+    ├── lecture-pipeline.service
+    └── lecture-pipeline.timer
 ```
