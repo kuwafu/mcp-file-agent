@@ -1,0 +1,15 @@
+[Unit]
+Description=Nextcloud Academic Notes MCP Server
+After=network.target tailscaled.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/ncp-automation
+ExecStart=/root/ncp-automation/venv/bin/python3 /root/ncp-automation/mcp_server.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

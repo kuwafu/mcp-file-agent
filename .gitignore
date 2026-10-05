@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+whisper-env/
+
+# 環境変数・クレデンシャル
+.env
+*.token
+*.pem
+*.key
+
+# 一時ファイル
+/tmp/
+*.wav
+*.aac
+*.mp3
