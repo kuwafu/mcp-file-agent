@@ -22,41 +22,40 @@
 物理ホスト（Proxmox VE）内の VM / LXC コンテナ間を Tailscale メッシュネットワークで結び、宅内 LAN の IP 変動や瞬断に影響されない閉域通信を確立しています。
 
 ```mermaid
-flowchart TB
+flowchart LR
     subgraph Host["オンプレミス物理ホスト (Proxmox VE: starlight)"]
-        direction TB
 
-        subgraph ArcLight["ArcLight (Ubuntu VM) ── 推論ノード"]
+        subgraph LC["LibreChat (Docker LXC) ── UI"]
             direction TB
-            AL_SPEC["CPU/RAM: デュアル Intel Xeon Gold<br/>(AVX-512 VNNI / 160GB RAM)"]
-            AL_PROXY["llama-proxy.service<br/>(FastAPI 動的プロキシ :8000)"]
-            AL_LLAMA["llama-server<br/>(Qwen3.5-122B-A10B, -c 32k)<br/>numactl --interleave=all / enable_thinking: false"]
-            AL_PIPE["lecture-pipeline<br/>(systemd timer 巡回 / faster-whisper large-v3)"]
-
-            AL_PROXY --> AL_LLAMA
-            AL_PIPE --> AL_PROXY
+            LC_UI["LibreChat UI<br/>(MCP Orchestration / Web)"]
         end
 
-        subgraph NCP["NextcloudPi (Debian LXC) ── ストレージ & MCP ハブ"]
+        subgraph NCP["NextcloudPi (Debian LXC) ── ストレージ & MCP"]
             direction TB
-            NCP_DAV["Nextcloud WebDAV API<br/>(:443 /remote.php/dav/files/)"]
             NCP_MCP["nextcloud-mcp.service<br/>(FastMCP SSE :8000)"]
-            NCP_SORT["sorter_worker.py<br/>(受動的ファイル自動仕分け)"]
+            NCP_SORT["sorter_worker.py<br/>(ファイル自動仕分け)"]
+            NCP_DAV[("Nextcloud WebDAV<br/>(:443 /remote.php/dav/)")]
 
             NCP_MCP --> NCP_DAV
             NCP_SORT --> NCP_DAV
         end
 
-        subgraph LC["LibreChat (Docker LXC) ── UI 基盤"]
-            LC_UI["LibreChat UI<br/>(MCP Orchestration / Web)"]
+        subgraph ArcLight["ArcLight (Ubuntu VM) ── 推論ノード (Xeon 160GB)"]
+            direction TB
+            AL_PROXY["llama-proxy.service<br/>(FastAPI :8000)"]
+            AL_LLAMA["llama-server (Qwen 122B, 32k)<br/>numactl interleave / no-think"]
+            AL_PIPE["lecture-pipeline<br/>(timer 巡回 / Whisper large-v3)"]
+
+            AL_PIPE --> AL_PROXY
+            AL_PROXY --> AL_LLAMA
         end
     end
 
-    %% 通信連携 (Tailscale メッシュ網)
-    LC_UI -- "MCP Tool Calls (SSE :8000)" --> NCP_MCP
-    LC_UI -- "Chat Completion (:8000)" --> AL_PROXY
-    NCP_SORT -- "JSON 分類リクエスト (:8000)" --> AL_PROXY
-    AL_PIPE -- "WebDAV PUT (文字起こし/要約)" --> NCP_DAV
+    %% ノード間連携
+    LC_UI -- "MCP Tool Calls<br/>(:8000)" --> NCP_MCP
+    LC_UI -- "Chat Completion<br/>(:8000)" --> AL_PROXY
+    NCP_SORT -- "JSON 分類<br/>(:8000)" --> AL_PROXY
+    AL_PIPE -- "WebDAV PUT<br/>(文字起こし/要約)" --> NCP_DAV
 ```
 
 ---
