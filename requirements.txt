@@ -1,9 +1,0 @@
-# FastMCP (1.x系で固定)
-mcp<2
-
-# HTTP & WebDAV 通信
-requests>=2.31.0
-urllib3>=2.0.0
-
-# 音声文字起こし & パイプライン (ArcLight 推論側)
-faster-whisper>=1.0.0
