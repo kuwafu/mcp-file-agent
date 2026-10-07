@@ -2,7 +2,7 @@
 """
 sorter_worker.py
 Nextcloud 受動的ファイル自動仕分けワーカー
-_Inbox を監視し、ローカル LLM (llama.cpp) を用いて科目・講義回を判定して自動移動
+_Inbox を監視し、ローカル LLM (llama.cpp / llama-proxy) を用いて科目・講義回を判定して自動移動
 """
 
 import os
@@ -15,8 +15,10 @@ NCP_HOST = os.getenv("NCP_HOST", "https://nextcloud.example.ts.net")
 NCP_USER = os.getenv("NCP_USER", "your_username")
 NCP_PASS = os.getenv("NCP_PASS", "your_app_password_here")
 
-LLM_HOST = os.getenv("LLM_HOST", "http://127.0.0.1:8080")
+# ArcLightの動的プロキシ（ポート8000）を指定
+LLM_HOST = os.getenv("LLM_HOST", "http://192.168.0.159:8000")
 LLM_API_URL = f"{LLM_HOST}/v1/chat/completions"
+LLM_MODEL = os.getenv("LLM_MODEL", "Qwen_Qwen3.5-122B-A10B-Q4_K_M-00001-of-00002.gguf")
 
 INBOX_DIR = "/_Inbox"
 TARGET_ROOT = os.getenv("TARGET_ROOT", "/大学/2026_秋")
@@ -33,9 +35,9 @@ SUBJECTS = [
 
 
 def classify_file(filename: str) -> dict:
-    """llama.cpp にファイル名を渡して分類判定（JSON）"""
+    """llama.cpp (llama-proxy) にファイル名を渡して分類判定（JSON）"""
     system_prompt = f"""あなたは大学の講義資料を分類する整理エンジンです。
-入力されたファイル名から該当する「科目名」と「講義の第何回か」を推測し、必ず以下のJSON形式のみで回答してください。前置きや解説は一切出力しないでください。
+入力されたファイル名から該当する「科目名」と「講義の第何回か」を推測し、必ず以下のJSON形式のみで回答してください。前置きや解説、思考プロセスは一切出力しないでください。
 
 【候補科目】
 {", ".join(SUBJECTS)}
@@ -44,12 +46,14 @@ def classify_file(filename: str) -> dict:
 {{"subject": "科目名", "week": 整数（不明な場合は0）}}"""
 
     payload = {
+        "model": LLM_MODEL,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"ファイル名: {filename}"}
         ],
         "temperature": 0.1,
-        "response_format": {"type": "json_object"}
+        "response_format": {"type": "json_object"},
+        "chat_template_kwargs": {"enable_thinking": False}
     }
 
     # チャット推論等のキュー待ちに耐えるようタイムアウト300秒
@@ -57,6 +61,11 @@ def classify_file(filename: str) -> dict:
     res.raise_for_status()
 
     content = res.json()["choices"][0]["message"]["content"]
+
+    # 万が一 <think> タグが含まれていた場合の防護処理
+    if "</think>" in content:
+        content = content.split("</think>")[-1].strip()
+
     return json.loads(content)
 
 

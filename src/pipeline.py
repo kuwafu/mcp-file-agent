@@ -14,14 +14,14 @@ from faster_whisper import WhisperModel
 # SSL警告の完全抑制
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# === 設定項目 (環境変数から取得、未設定時はダミー/デフォルト値) ===
+# === 設定項目 (環境変数から取得、未設定時はデフォルト値) ===
 NC_HOST = os.getenv("NC_HOST", "https://nextcloud.example.ts.net")
 NC_USER = os.getenv("NC_USER", "your_username")
 NC_PASS = os.getenv("NC_PASS", "your_app_password_here")
 DAV_BASE = f"{NC_HOST}/remote.php/dav/files/{NC_USER}"
 TARGET_ROOT = os.getenv("TARGET_ROOT", "大学/2026_秋")  # MCPサーバー側の参照ルートと完全に一致させる
 LLM_API_URL = os.getenv("LLM_API_URL", "http://127.0.0.1:8000/v1/chat/completions")
-LLM_MODEL = os.getenv("LLM_MODEL", "Qwen2.5-32B-Instruct-Q4_K_M.gguf")
+LLM_MODEL = os.getenv("LLM_MODEL", "Qwen_Qwen3.5-122B-A10B-Q4_K_M-00001-of-00002.gguf")
 
 auth = (NC_USER, NC_PASS)
 
@@ -99,9 +99,11 @@ def summarize_with_llm(subject: str, lecture_round: str, transcript: str) -> str
             {"role": "user", "content": user_prompt}
         ],
         "temperature": 0.3,
-        "max_tokens": 4096
+        "max_tokens": 4096,
+        "chat_template_kwargs": {"enable_thinking": False}
     }
-    res = requests.post(LLM_API_URL, json=payload, timeout=1200)
+    # 巨大モデル・長文推論用にタイムアウトを1800秒（30分）に設定
+    res = requests.post(LLM_API_URL, json=payload, timeout=1800)
     res.raise_for_status()
     return res.json()["choices"][0]["message"]["content"]
 
